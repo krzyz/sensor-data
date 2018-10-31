@@ -1,5 +1,5 @@
 import time
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 from flask import Flask, render_template
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import and_
@@ -17,11 +17,13 @@ db = SQLAlchemy(app)
 
 from models import Sensor, SensorData
 
-@app.route("/", defaults={'timerange': 5})
+@app.route("/", defaults={'timerange': 24})
 @app.route("/<int:timerange>")
 def index(timerange):
-    upper = datetime(2018, 10, 28, 12, 0, 0)
-    then = upper - timedelta(hours=timerange)
+    upper = datetime.now()
+    then = date.min
+    if timerange > 0:
+        then = upper - timedelta(hours=timerange)
     #sensors = Sensor.query.all()
     #sensors = Sensor.query.filter(SensorData.date >= time.mktime(then.timetuple()) , SensorData.date <= time.mktime(now.timetuple())).all()
     #sensors = Sensor.query.filter(SensorData.date.between(then, now)).all()
