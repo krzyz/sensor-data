@@ -1,0 +1,54 @@
+<!doctype html>
+<html>
+<head>
+    <meta charset="UTF-8">
+<style>
+  .zoom {
+  cursor: move;
+  fill: none;
+  pointer-events: all;
+}
+</style>
+</head>
+<body>
+
+<svg id="svg1" width="960" height="500"></svg>
+<svg id="svg2" width="960" height="500"></svg>
+<svg id="svg3" width="960" height="500"></svg>
+
+<script type="text/javascript" src="static/index_bundle.js"></script>
+<script>
+  //var sensorsData =  {{ sensors | safe }}
+  var sensorsData = [
+  {% for sensor in sensors %}
+  {
+    'name': '{{ sensor.name }}',
+    'unit': '{{ sensor.unit }}',
+    'data': [
+    {% for data in sensor.data %}
+      {
+        'date': {{ data.date }},
+        'value': {{data.value}}
+      },
+    {% endfor %}
+    ]
+  },
+  {% endfor %}
+  ];
+
+  window.onload = function() {
+    /*
+    var svg1 = document.getElementById("svg1");
+    var svg2 = document.getElementById("svg2");
+    var svg3 = document.getElementById("svg3");
+    */
+    var svg1 = "#svg1";
+    var svg2 = "#svg2";
+    var svg3 = "#svg3";
+    mylibrary.drawGraph(svg1, sensorsData[0]);
+    mylibrary.drawGraph(svg2, sensorsData[1]);
+    mylibrary.drawGraph(svg3, sensorsData[2]);
+  };
+</script>
+</body>
+</html>
