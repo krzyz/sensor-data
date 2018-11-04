@@ -7,14 +7,22 @@
   cursor: move;
   fill: none;
   pointer-events: all;
-}
+  }
+  .axis0 text {
+    fill: crimson;
+  }
+  .axis1 text {
+    fill: steelblue;
+  }
+  .axis2 text {
+    fill: green;
+  }
+
 </style>
 </head>
 <body>
 
-<svg id="svg1" width="960" height="500"></svg>
-<svg id="svg2" width="960" height="500"></svg>
-<svg id="svg3" width="960" height="500"></svg>
+<svg id="svg" width="1500" height="500"></svg>
 
 <script type="text/javascript" src="static/index_bundle.js"></script>
 <script>
@@ -37,17 +45,7 @@
   ];
 
   window.onload = function() {
-    /*
-    var svg1 = document.getElementById("svg1");
-    var svg2 = document.getElementById("svg2");
-    var svg3 = document.getElementById("svg3");
-    */
-    var svg1 = "#svg1";
-    var svg2 = "#svg2";
-    var svg3 = "#svg3";
-    mylibrary.drawGraph(svg1, sensorsData[0]);
-    mylibrary.drawGraph(svg2, sensorsData[1]);
-    mylibrary.drawGraph(svg3, sensorsData[2]);
+    mylibrary.drawGraph("#svg", sensorsData);
   };
 </script>
 </body>
