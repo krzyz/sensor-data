@@ -135,7 +135,12 @@ function drawGraph(svgElement, sensorsData) {
             focus.append("g")
                 .attr("class", "axis axis--y axis"+i)
                 .attr("transform", "translate(" + axDistanceRight + " ,0)")
-                .call(yAxes[i]);
+                .call(yAxes[i])
+                .call(g => g.select(".tick:last-of-type text").clone()
+                    .attr("y", -15)
+                    .attr("text-anchor", "start")
+                    .attr("font-weight", "bold")
+                    .text(sensor.unit));
 
 
             context.append("path")
