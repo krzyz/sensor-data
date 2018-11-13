@@ -1,6 +1,6 @@
 import * as d3 from 'd3'
 
-function drawGraph(svgElement, sensorsData) {
+function drawGraph(svgElement, sensorsData, colors, document, yDomainFromZero = false) {
 
     var ylabelwidth = 50;
 
@@ -18,9 +18,11 @@ function drawGraph(svgElement, sensorsData) {
 
     var ys = [];
     var y2s = [];
-    var yAxes = []
-    var valuelines = []
-    var valueline2s = []
+    var yAxes = [];
+    var valuelines = [];
+    var valueline2s = [];
+
+    var stylesTxt = '';
 
     Array.prototype.forEach.call(sensorsData, (sensor, i) => {
         ys.push(d3.scaleLinear().range([height, 0]));
@@ -43,7 +45,18 @@ function drawGraph(svgElement, sensorsData) {
             .x(function(d) { return x(d.date); })
             .y(function(d) { return y2s[i](d.value); })
         );
+
+        stylesTxt += '\n' + svgElement + ' .axis' + i + ' text { fill: ' + colors[i]+ '; }';
     });
+
+    var style=document.createElement('style');
+    style.type='text/css';
+    if(style.styleSheet){
+        style.styleSheet.cssText=stylesTxt;
+    }else{
+        style.appendChild(document.createTextNode(stylesTxt));
+    }
+    document.getElementsByTagName('head')[0].appendChild(style);
 
     var xAxis = d3.axisBottom(x),
         xAxis2 = d3.axisBottom(x2);
@@ -72,7 +85,6 @@ function drawGraph(svgElement, sensorsData) {
         .attr("class", "context")
         .attr("transform", "translate(" + margin2.left + "," + margin2.top + ")");
 
-    var colors = ["crimson", "steelblue", "green", "slategray", "orchid", "chocolate", "orange"];
 
     function applyData(sensorsData) {
         Array.prototype.forEach.call(sensorsData, (sensor, i) => {
@@ -83,10 +95,8 @@ function drawGraph(svgElement, sensorsData) {
                 d.value = +d.value;
             });
 
-            if (i == 0) {
-                console.log(data);
+            if (i === 0) {
                 x.domain(d3.extent(data, function(d) { return d.date; }));
-                console.log(x.domain());
                 x2.domain(x.domain());
 
                 focus.append("g")
@@ -112,7 +122,18 @@ function drawGraph(svgElement, sensorsData) {
                     .call(zoom);
             }
 
-            ys[i].domain(d3.extent(data, function(d) { return d.value; }));
+            if (yDomainFromZero === true) {
+                var max = Number.NEGATIVE_INFINITY;
+                Array.prototype.forEach.call(sensorsData, (sensor, i) => {
+                    var newMax = d3.max(sensor.data, function(d) {return d.value; });
+                    if (newMax > max) {
+                        max = newMax;
+                    }
+                });
+                ys[i].domain([0, max]);
+            } else {
+                ys[i].domain(d3.extent(data, function(d) { return d.value; }));
+            }
             y2s[i].domain(ys[i].domain());
 
             focus.append("path")
@@ -128,8 +149,10 @@ function drawGraph(svgElement, sensorsData) {
 
 
             var axDistanceRight = 0;
+            var labXLeft = -30;
             if (i > 0 ) {
                 axDistanceRight += width + ylabelwidth*(i-1);
+                labXLeft = 0;
             }
 
             focus.append("g")
@@ -137,11 +160,11 @@ function drawGraph(svgElement, sensorsData) {
                 .attr("transform", "translate(" + axDistanceRight + " ,0)")
                 .call(yAxes[i])
                 .call(g => g.select(".tick:last-of-type text").clone()
+                    .attr("x", labXLeft)
                     .attr("y", -15)
                     .attr("text-anchor", "start")
                     .attr("font-weight", "bold")
-                    .text(sensor.unit));
-
+                    .text(sensor.name + ' (' + sensor.unit + ')'));
 
             context.append("path")
                 .datum(data)
@@ -188,6 +211,7 @@ function drawGraph(svgElement, sensorsData) {
     }
 
     applyData(sensorsData);
+
 }
 
 module.exports = {

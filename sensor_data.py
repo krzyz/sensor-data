@@ -1,6 +1,6 @@
 import time
 from datetime import date, datetime, timedelta
-from flask import Flask, render_template
+from flask import Flask, render_template, redirect
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import and_
 from sqlalchemy.sql import select
@@ -27,13 +27,13 @@ def index(timerange):
     sensors = Sensor.query.join(Sensor.data).options(contains_eager(Sensor.data)).filter(SensorData.date.between(time.mktime(then.timetuple()), time.mktime(upper.timetuple()))).all()
     return render_template('index.html', sensors=sensors)
 
-@app.route("/data/<float:temp>/<float:hum>/<float:pres>/<string:pwd>", methods=['GET', 'POST'])
-def data(temp, hum, pres, pwd):
+@app.route("/data/<float:temp>/<float:hum>/<float:pres>/<float:pm2_5>/<float:pm10>/<string:pwd>", methods=['GET', 'POST'])
+def data(temp, hum, pres, pm2_5, pm10, pwd):
     if pwd == app.config['PASS']:
         now = datetime.now()
-        sensor_names = ['temp', 'hum', 'pres']
-        sensor_units = ['°C', '%', 'hPa']
-        values = [temp, hum, pres]
+        sensor_names = ['temp', 'hum', 'pres', 'PM 2.5', 'PM 10']
+        sensor_units = ['°C', '%', 'hPa', 'μg /m³', 'μg /m³']
+        values = [temp, hum, pres, pm2_5, pm10]
 
         for (sensor_name, unit, value) in zip(sensor_names, sensor_units, values):
             sensor = Sensor.query.filter_by(name = sensor_name).first()
@@ -46,8 +46,7 @@ def data(temp, hum, pres, pwd):
             sensor.data.append(data)
             db.session.add(data)
             db.session.commit()
-    sensors = Sensor.query.all()
-    return render_template('index.html', isensors=enumerate(sensors), slen = len(sensors))
+    return redirect("/", code=303)
 
 @app.before_first_request
 def create_tables():

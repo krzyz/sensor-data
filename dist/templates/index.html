@@ -8,21 +8,13 @@
   fill: none;
   pointer-events: all;
   }
-  .axis0 text {
-    fill: crimson;
-  }
-  .axis1 text {
-    fill: steelblue;
-  }
-  .axis2 text {
-    fill: green;
-  }
-
 </style>
+
 </head>
 <body>
 
-<svg id="svg" width="1500" height="500"></svg>
+<svg id="svg0" width="1500" height="500"></svg> 
+<svg id="svg1" width="1500" height="500"></svg>
 
 <script type="text/javascript" src="static/index_bundle.js"></script>
 <script>
@@ -44,8 +36,12 @@
   {% endfor %}
   ];
 
+  var colors0 = ["gray", "black"];
+  var colors1 = ["crimson", "steelblue", "green"];
+
   window.onload = function() {
-    mylibrary.drawGraph("#svg", sensorsData);
+    mylibrary.drawGraph("#svg0", sensorsData.slice(3), colors0, document, true);
+    mylibrary.drawGraph("#svg1", sensorsData.slice(0, 3), colors1, document);
   };
 </script>
 </body>
