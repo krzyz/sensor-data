@@ -3,15 +3,22 @@ import * as d3 from 'd3'
 function drawGraph(svgElement, sensorsData, colors, document, yDomainFromZero = false) {
 
     let ylabelwidth = 50;
+    let paddingLeftRight = 0;
+    let paddingTopBottom = 0;
+    let circler = 4.5;
+
+    let marginTop = 20,
+        marginLeft = 40;
 
     let svg = d3.select(svgElement),
-        margin = {top: 20, right: 20, bottom: 110, left: 40},
-        margin2 = {top: 430, right: 20, bottom: 30, left: 40},
+        margin = {top: marginTop, right: 20, bottom: 110, left: marginLeft},
+        margin2 = {top: 430, right: 20, bottom: 30, left: marginLeft},
         width = +svg.attr("width") - margin.left - margin.right - (sensorsData.length-1) * ylabelwidth,
         height = +svg.attr("height") - margin.top - margin.bottom,
         height2 = +svg.attr("height") - margin2.top - margin2.bottom;
 
-    let parseDate = d3.timeParse("%s");
+    let parseDate = d3.timeParse("%s"),
+        bisectDate = d3.bisector(function(d) { return d.date; }).left;
 
     let x = d3.scaleTime().range([0, width]),
         x2 = d3.scaleTime().range([0, width]);
@@ -23,6 +30,11 @@ function drawGraph(svgElement, sensorsData, colors, document, yDomainFromZero = 
     let valueline2s = [];
 
     let stylesTxt = '';
+
+    let sfoci = [];
+    let sfocig = svg.append("g")
+        .attr("transform", "translate(" + marginLeft + "," + marginTop + ")")
+        .attr("clip-path", "url(#clip_" + svgElement + ")");
 
     Array.prototype.forEach.call(sensorsData, (sensor, i) => {
         ys.push(d3.scaleLinear().range([height, 0]));
@@ -46,8 +58,27 @@ function drawGraph(svgElement, sensorsData, colors, document, yDomainFromZero = 
             .y(function(d) { return y2s[i](d.value); })
         );
 
+        sfoci.push(
+            sfocig.append("g")
+            .attr("class", "sfocus" + i)
+            .style("display", "none"));
+        
+        sfoci[i].append("circle")
+            .attr("r", circler);
+
+        sfoci[i].append("rect")
+        
+        sfoci[i].append("text")
+            .attr("x", 2 * circler)
+            .attr("dy", ".35em");
+
         stylesTxt += '\n' + svgElement + ' .axis' + i + ' text { fill: ' + colors[i]+ '; }';
+        stylesTxt += '\n' + svgElement + ' .sfocus' + i + ' rect { fill: white; }';
+        stylesTxt += '\n' + svgElement + ' .sfocus' + i + ' text { fill: ' + colors[i]+ '; }';
+        stylesTxt += '\n' + svgElement + ' .sfocus' + i + ' circle { fill: none; stroke: ' + colors[i] + ' }';
     });
+
+    updateRects();
 
     let style=document.createElement('style');
     style.type='text/css';
@@ -85,7 +116,6 @@ function drawGraph(svgElement, sensorsData, colors, document, yDomainFromZero = 
         .attr("class", "context")
         .attr("transform", "translate(" + margin2.left + "," + margin2.top + ")");
 
-
     function applyData(sensorsData) {
         Array.prototype.forEach.call(sensorsData, (sensor, i) => {
             let data = sensor.data;
@@ -119,6 +149,9 @@ function drawGraph(svgElement, sensorsData, colors, document, yDomainFromZero = 
                     .attr("width", width)
                     .attr("height", height)
                     .attr("transform", "translate(" + margin.left + "," + margin.top + ")")
+                    .on("mouseover", function() {changeSfoci(null)})
+                    .on("mouseout", function() {changeSfoci("none")})
+                    .on("mousemove", mousemove)
                     .call(zoom);
             }
 
@@ -182,6 +215,8 @@ function drawGraph(svgElement, sensorsData, colors, document, yDomainFromZero = 
         });
     }
 
+
+
     function brushed() {
         if (d3.event.sourceEvent && d3.event.sourceEvent.type === "zoom") return; // ignore brush-by-zoom
         let s = d3.event.selection || x2.range();
@@ -196,7 +231,7 @@ function drawGraph(svgElement, sensorsData, colors, document, yDomainFromZero = 
             .translate(-s[0], 0));
     }
 
-        function zoomed() {
+    function zoomed() {
         if (d3.event.sourceEvent && d3.event.sourceEvent.type === "brush") return; // ignore zoom-by-brush
         let t = d3.event.transform;
         x.domain(t.rescaleX(x2).domain());
@@ -205,17 +240,68 @@ function drawGraph(svgElement, sensorsData, colors, document, yDomainFromZero = 
         }
         focus.select(".axis--x").call(xAxis);
         context.select(".brush").call(brush.move, x.range().map(t.invertX, t));
+        changeSfoci("none");
     }
 
-    function type(d) {
-        d.date = parseDate(d.date);
-        d.value = +d.value;
-        return d;
+    function mousemove() {
+        changeSfoci(null);
+        let x0 = x.invert(d3.mouse(this)[0]);
+
+        Array.prototype.forEach.call(sensorsData, (sensor, i) => {
+            let data = sensor.data,
+                j = bisectDate(data, x0, 1),
+                d0 = data[j - 1],
+                d1 = data[j],
+                d = x0 - d0.date > d1.date - x0 ? d1 : d0,
+                xtrans = x(d.date),
+                ytrans = ys[i](d.value);
+            let text = sfoci[i].select("text");
+            let textbb = text.node().getBBox();
+            text.text(d.value);
+
+            if (xtrans + textbb.width > width) {
+                text.attr("x", -2 * circler - textbb.width);
+            } else {
+                text.attr("x", 2 * circler);
+            }
+            if (ytrans + textbb.height/2 > height) {
+                text.attr("y", -(ytrans - height) - textbb.height/2);
+            } else if (ytrans - textbb.height/2 < 0) {
+                text.attr("y", textbb.height/2);
+            } else {
+                text.attr("y", 0);
+            }
+
+            sfoci[i].attr("transform", "translate(" + xtrans + "," + ytrans + ")");
+            text.raise();
+        });
+
+        updateRects();
+    }
+
+    function changeSfoci(value) {
+        Array.prototype.forEach.call(sfoci, sfocus => {
+                sfocus.style("display", value); 
+        })
+    }
+
+    function updateRects() {
+        for (let i = 0; i < sfoci.length; i++) {
+            let text = sfoci[i].select("text");
+            let textbb = text.node().getBBox();
+            sfoci[i].select("rect")
+                .attr("x", textbb.x - paddingLeftRight/2)
+                .attr("y", textbb.y - paddingTopBottom/2)
+                .attr("width", textbb.width + paddingLeftRight)
+                .attr("height", textbb.height + paddingTopBottom)
+            sfocig.raise();
+            svg.select('.zoom').raise();
+        }
     }
 
     applyData(sensorsData);
 
-    console.log(width);
+
 
 }
 
